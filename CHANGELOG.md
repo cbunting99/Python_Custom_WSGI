@@ -2,6 +2,34 @@
 
 All notable changes to the Python Custom WSGI Server will be documented in this file.
 
+## [1.3.0] - 2025-06-12
+### Security
+- Added request size limits to prevent memory exhaustion
+- Implemented header validation and injection protection
+- Added timeout handling for slow clients
+- Enhanced error responses to avoid information disclosure
+
+### Added
+- Implemented proper resource management and cleanup
+- Added graceful shutdown support
+- Added connection tracking and limits
+- Introduced proper logging system with configurable handlers
+- Added TCP keepalive and socket buffer optimizations
+
+### Fixed
+- Memory management issues in request handling
+- Resource leaks in HTTP parser
+- Concurrency issues in request processing
+- Connection cleanup on errors
+- Input validation for headers and URLs
+
+### Changed
+- Improved error handling with custom exceptions
+- Enhanced socket configurations for better performance
+- Switched to BytesIO for efficient body handling
+- Added proper WSGI compliance checks
+- Implemented concurrent request limiting
+
 ## [1.2.0] - 2025-06-12
 ### Added
 - Added comprehensive type annotations to request handler
