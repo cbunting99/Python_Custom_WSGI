@@ -3,7 +3,7 @@
 
 import sys
 import time
-from wsgi_server import HighPerformanceWSGIServer
+from src.core import HighPerformanceWSGIServer
 
 def test_app(environ, start_response):
     """Simple test WSGI application"""
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         print("✓ Server instance created successfully")
         print("✓ Server is ready for use!")
         print("\nTo start the server, run:")
-        print("python quick_test.py")
+        print("python examples/quick_test.py")
         print("Then visit: http://127.0.0.1:8000")
         
     except Exception as e:
