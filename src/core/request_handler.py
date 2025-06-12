@@ -1,6 +1,7 @@
 import asyncio
 from io import StringIO
 import sys
+from typing import Dict, List, Tuple, Union
 
 class WSGIHandler:
     def __init__(self, app):
@@ -36,16 +37,27 @@ class WSGIHandler:
             await writer.drain()
             
         except Exception as e:
-            # Send 500 error
-            error_response = b'HTTP/1.1 500 Internal Server Error\r\n\r\nInternal Server Error'
+            # Send 500 error with more detailed message
+            error_msg = f"Internal Server Error: {str(e)}"
+            error_response = (
+                b'HTTP/1.1 500 Internal Server Error\r\n'
+                b'Content-Type: text/plain\r\n'
+                b'Connection: close\r\n'
+                b'\r\n' +
+                error_msg.encode()
+            )
             writer.write(error_response)
             await writer.drain()
+            # Log the error
+            print(f"Error processing request: {error_msg}")
         finally:
             writer.close()
             await writer.wait_closed()
     
-    def _build_environ(self, method, path, headers, body, writer):
-        # Build WSGI environ dict
+    def _build_environ(self, method: str, path: str,
+                      headers: Dict[str, str], body: bytes,
+                      writer: asyncio.StreamWriter) -> Dict[str, Union[str, bool, tuple]]:
+        """Build WSGI environ dictionary with proper type annotations"""
         environ = {
             'REQUEST_METHOD': method,
             'PATH_INFO': path,
@@ -74,18 +86,23 @@ class WSGIHandler:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self._sync_wsgi_call, environ)
     
-    def _sync_wsgi_call(self, environ):
-        response_data = []
-        status = None
-        headers = None
+    def _sync_wsgi_call(self, environ: Dict[str, Union[str, bool, tuple]]) -> bytes:
+        """Execute WSGI application synchronously and return response"""
+        response_data: List[bytes] = []
+        status: str = ''
+        headers: List[Tuple[str, str]] = []
         
-        def start_response(status_line, response_headers):
+        def start_response(status_line: str, response_headers: List[Tuple[str, str]]) -> None:
             nonlocal status, headers
             status = status_line
             headers = response_headers
             
         # Call the WSGI application
-        result = self.app(environ, start_response)
+        try:
+            result = self.app(environ, start_response)
+        except Exception as e:
+            print(f"Error in WSGI application: {e}")
+            raise
         
         # Build HTTP response
         response_parts = [f'HTTP/1.1 {status}\r\n'.encode()]
