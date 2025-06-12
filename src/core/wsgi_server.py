@@ -3,6 +3,7 @@ import asyncio
 import socket
 import multiprocessing
 from typing import Callable
+
 from .request_handler import WSGIHandler
 from .server_utils import setup_uvloop, configure_socket_opts, handle_client_error
 
@@ -15,8 +16,29 @@ class HighPerformanceWSGIServer:
                  backlog: int = 2048):
         self.app = app
         self.host = host
+        
+        # Validate port number
+        if not isinstance(port, int):
+            raise ValueError("Port must be an integer")
+        if port < 0 or port > 65535:
+            raise ValueError("Port number must be between 0 and 65535")
         self.port = port
-        self.workers = workers or multiprocessing.cpu_count()
+        
+        # Validate and set worker count
+        if workers is not None:
+            if not isinstance(workers, int):
+                raise ValueError("Workers must be an integer")
+            if workers < 1:
+                raise ValueError("Worker count must be at least 1")
+            self.workers = workers
+        else:
+            self.workers = multiprocessing.cpu_count()
+        
+        # Validate backlog
+        if not isinstance(backlog, int):
+            raise ValueError("Backlog must be an integer")
+        if backlog < 1:
+            raise ValueError("Backlog must be at least 1")
         self.backlog = backlog
         
     def run(self):

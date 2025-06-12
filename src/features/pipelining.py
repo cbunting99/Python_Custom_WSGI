@@ -1,10 +1,16 @@
 import asyncio
-from ..core.request_handler import WSGIHandler
 
 class PipelineHandler:
-    def __init__(self, app):
+    def __init__(self, app, handler_class=None):
+        """Initialize pipeline handler.
+        
+        Args:
+            app: WSGI application
+            handler_class: Class to handle individual requests (optional)
+        """
         self.app = app
-        self.wsgi_handler = WSGIHandler(app)
+        # Create handler instance if class provided
+        self.request_handler = handler_class(app) if handler_class else None
     
     async def handle_pipeline(self, reader, writer):
         while True:
@@ -53,7 +59,11 @@ class PipelineHandler:
     
     async def _process_request(self, request_data):
         """Process a single request"""
-        # This is a simplified version - in practice you'd parse the request properly
+        # Use provided handler if available
+        if self.request_handler:
+            return await self.request_handler.handle_request(request_data)
+            
+        # Fallback to simple request handling
         try:
             # Parse request line and headers
             lines = request_data.decode().split('\r\n')

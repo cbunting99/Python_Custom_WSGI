@@ -22,11 +22,12 @@ python examples/example_usage.py
 ## Features
 
 - **🚀 High Performance**: Built with uvloop (Linux/macOS) and httptools for maximum speed
-- **⚡ Asynchronous**: Non-blocking I/O with asyncio for concurrent request handling  
+- **⚡ Asynchronous**: Non-blocking I/O with asyncio for concurrent request handling
 - **🔧 Multi-Process**: Automatic worker process management with SO_REUSEPORT
 - **🔄 Keep-Alive**: HTTP/1.1 persistent connections for reduced latency
 - **📊 Memory Optimized**: Buffer pooling and memory-efficient request parsing
-- **🛠 WSGI Compatible**: Works with any WSGI application (Flask, Django, etc.)
+- **🔒 SSL/TLS Support**: Modern TLS 1.2+ with secure cipher suites
+- ** WSGI Compatible**: Works with any WSGI application (Flask, Django, etc.)
 - **🌐 Cross-Platform**: Supports Windows, Linux, and macOS with platform-specific optimizations
 - **🎯 Production Ready**: Optimized for real-world deployment scenarios
 
@@ -129,6 +130,27 @@ import asyncio
 server = WSGIServer(app)
 asyncio.run(server.start())
 ```
+
+## Security Features
+
+### SSL/TLS Support
+
+Enable HTTPS with modern security settings:
+
+```python
+from src.core import WSGIServer
+
+server = WSGIServer(
+    app,
+    host='0.0.0.0',
+    port=443,
+    ssl_certfile='path/to/cert.pem',
+    ssl_keyfile='path/to/key.pem',
+    ssl_ciphers='ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384'  # Optional
+)
+```
+
+See `examples/ssl_example.py` for a complete SSL setup example.
 
 ## Performance Features
 

@@ -2,6 +2,20 @@
 
 All notable changes to the Python Custom WSGI Server will be documented in this file.
 
+## [1.4.0] - 2025-06-12
+### Added
+- Implemented SSL/TLS support with modern cipher suites
+- Added secure TLS 1.2+ configuration with strong ciphers
+- Created SSL utility functions for certificate management
+- Added SSL example with self-signed certificate generation
+- Enhanced server startup with automatic SSL detection
+
+### Security
+- Enforced minimum TLS 1.2 protocol version
+- Implemented secure cipher suite configuration
+- Added certificate validation utilities
+- Disabled older, insecure SSL/TLS protocols
+
 ## [1.3.0] - 2025-06-12
 ### Security
 - Added request size limits to prevent memory exhaustion
