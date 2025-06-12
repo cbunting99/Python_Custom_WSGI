@@ -200,3 +200,6 @@ logs/
 
 # IDE specific
 .snapshots/
+
+# Custom features documentation
+chrisfeatures.md
