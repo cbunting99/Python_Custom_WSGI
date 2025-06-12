@@ -126,7 +126,9 @@ class HTTPProtocolTests(unittest.TestCase):
         self.assertEqual(self.captured_env.get('CONTENT_TYPE'), 'application/json')
         self.assertEqual(self.captured_env.get('HTTP_X_CUSTOM_HEADER'), 'test_value')
         self.assertEqual(self.captured_env.get('HTTP_USER_AGENT'), 'TestSuite/1.0')
-        self.assertEqual(self.captured_env.get('PATH_INFO'), '/test_headers')    def test_keep_alive(self):
+        self.assertEqual(self.captured_env.get('PATH_INFO'), '/test_headers')
+
+    def test_keep_alive(self):
         """Test keep-alive connection handling"""
         # Test HTTP/1.1 (keep-alive by default)
         request_http11 = (
@@ -135,11 +137,7 @@ class HTTPProtocolTests(unittest.TestCase):
             b'\r\n'
         )
         response_http11 = self._run_raw_request(request_http11)
-        response_headers = response_http11.split(b'\r\n\r\n', 1)[0].lower()
-        self.assertTrue(
-            b'connection: keep-alive' in response_headers or b'Connection: keep-alive' in response_headers,
-            f"keep-alive header not found in response headers: {response_headers}"
-        )
+        self.assertIn(b'Connection: keep-alive', response_http11.split(b'\r\n\r\n', 1)[0].lower())
         
         # Test HTTP/1.0 with keep-alive
         request_http10_keepalive = (
@@ -149,11 +147,7 @@ class HTTPProtocolTests(unittest.TestCase):
             b'\r\n'
         )
         response_http10_keepalive = self._run_raw_request(request_http10_keepalive)
-        response_headers = response_http10_keepalive.split(b'\r\n\r\n', 1)[0].lower()
-        self.assertTrue(
-            b'connection: keep-alive' in response_headers or b'Connection: keep-alive' in response_headers,
-            f"keep-alive header not found in response headers: {response_headers}"
-        )
+        self.assertIn(b'Connection: keep-alive', response_http10_keepalive.split(b'\r\n\r\n', 1)[0].lower())
         
         # Test explicit close for HTTP/1.1
         request_http11_close = (
@@ -163,11 +157,7 @@ class HTTPProtocolTests(unittest.TestCase):
             b'\r\n'
         )
         response_http11_close = self._run_raw_request(request_http11_close)
-        response_headers = response_http11_close.split(b'\r\n\r\n', 1)[0].lower()
-        self.assertTrue(
-            b'connection: close' in response_headers or b'Connection: close' in response_headers,
-            f"close header not found in response headers: {response_headers}"
-        )
+        self.assertIn(b'Connection: close', response_http11_close.split(b'\r\n\r\n', 1)[0].lower())
 
     def test_malformed_requests(self):
         """Test handling of malformed requests"""
