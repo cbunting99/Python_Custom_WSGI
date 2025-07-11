@@ -35,11 +35,16 @@ class TestHTTP2Stream(unittest.TestCase):
         self.assertEqual(self.stream.state, 'idle')
 
     @patch.object(HTTP2Stream, 'process_complete_request')
-    async def test_process_headers(self, mock_process):
+    def test_process_headers(self, mock_process):
         headers = [(':method', 'GET'), (':path', '/')]
-        await self.stream.process_headers(headers)
-        self.assertEqual(self.stream.headers, headers)
-        self.assertEqual(self.stream.state, 'open')
+        # Run the coroutine in an event loop
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(self.stream.process_headers(headers))
+            self.assertEqual(self.stream.headers, headers)
+            self.assertEqual(self.stream.state, 'open')
+        finally:
+            loop.close()
 
 class TestConfigureHTTP2(unittest.TestCase):
     def test_configure_http2(self):

@@ -141,11 +141,14 @@ class TestCORSHeaders(unittest.TestCase):
             allowed_methods=['GET'],
             allow_credentials=True
         )
-        new_headers = apply_cors_headers(headers, cors_config)
+        # Create mock environ with Origin header
+        environ = {'HTTP_ORIGIN': 'https://example.com'}
+        new_headers = apply_cors_headers(headers, cors_config, environ)
         
         self.assertIn(('Access-Control-Allow-Origin', 'https://example.com'), new_headers)
         self.assertIn(('Access-Control-Allow-Methods', 'GET'), new_headers)
         self.assertIn(('Access-Control-Allow-Credentials', 'true'), new_headers)
+        self.assertIn(('Vary', 'Origin'), new_headers)
 
 if __name__ == '__main__':
     unittest.main()

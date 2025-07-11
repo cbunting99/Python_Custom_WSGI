@@ -126,7 +126,9 @@ class HTTPProtocolTests(unittest.TestCase):
         self.assertEqual(self.captured_env.get('CONTENT_TYPE'), 'application/json')
         self.assertEqual(self.captured_env.get('HTTP_X_CUSTOM_HEADER'), 'test_value')
         self.assertEqual(self.captured_env.get('HTTP_USER_AGENT'), 'TestSuite/1.0')
-        self.assertEqual(self.captured_env.get('PATH_INFO'), '/test_headers')    def test_keep_alive(self):
+        self.assertEqual(self.captured_env.get('PATH_INFO'), '/test_headers')
+        
+    def test_keep_alive(self):
         """Test keep-alive connection handling"""
         # Test HTTP/1.1 (keep-alive by default)
         request_http11 = (
