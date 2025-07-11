@@ -38,27 +38,41 @@ class HTTPParser:
             raise HTTPParserError(f"Failed to initialize parser: {e}")
             
         self.headers: Dict[str, str] = {}
+        self.trailers: Dict[str, str] = {}
         self.body = b''
         self.url: Optional[bytes] = None
         self.method: Optional[bytes] = None
         self._headers_count = 0
         self._parsing_complete = False
+        self._chunked = False
+        self._chunk_size = 0
+        self._expect_continue = False
+        self._content_length = 0
+        self._body_bytes_read = 0
         
     def reset(self) -> None:
         """Reset parser state to handle a new request.
         
         Clears all internal state variables including:
         - Headers dictionary
+        - Trailers dictionary
         - Request body
         - URL and method information
         - Parser completion flag
+        - Chunked transfer state
         """
         self.headers.clear()
+        self.trailers.clear()
         self.body = b''
         self.url = None
         self.method = None
         self._headers_count = 0
         self._parsing_complete = False
+        self._chunked = False
+        self._chunk_size = 0
+        self._expect_continue = False
+        self._content_length = 0
+        self._body_bytes_read = 0
         
     def on_message_begin(self) -> None:
         """Called when a new message parsing begins.
@@ -139,11 +153,34 @@ class HTTPParser:
         Raises:
             HTTPParserError: If body exceeds maximum size limit
             
-        Accumulates body data while enforcing size limits.
+        Handles both regular and chunked transfer encoding.
         """
-        if len(self.body) + len(body) > self.MAX_BODY_SIZE:
-            raise HTTPParserError("Request body too large")
-        self.body += body
+        if self._chunked:
+            self._process_chunk(body)
+        else:
+            if len(self.body) + len(body) > self.MAX_BODY_SIZE:
+                raise HTTPParserError("Request body too large")
+            self.body += body
+            self._body_bytes_read += len(body)
+            
+    def _process_chunk(self, chunk: bytes) -> None:
+        """Process chunked transfer encoding data."""
+        if self._chunk_size == 0:
+            # Parse chunk size line
+            try:
+                chunk_line = chunk.split(b'\r\n', 1)[0]
+                self._chunk_size = int(chunk_line.split(b';')[0], 16)
+                if self._chunk_size == 0:
+                    self._parsing_complete = True
+            except (ValueError, IndexError):
+                raise HTTPParserError("Invalid chunk encoding")
+        else:
+            # Process chunk data
+            if len(self.body) + len(chunk) > self.MAX_BODY_SIZE:
+                raise HTTPParserError("Request body too large")
+            self.body += chunk
+            self._body_bytes_read += len(chunk)
+            self._chunk_size -= len(chunk)
         
     def on_message_complete(self):
         """Called when parsing is complete"""
@@ -171,6 +208,14 @@ class HTTPParser:
         """Check if parsing is complete"""
         return self._parsing_complete
 
+    def close(self) -> None:
+        """Explicitly cleanup parser resources"""
+        if hasattr(self, 'parser'):
+            self.parser = None
+            
     def __del__(self):
-        """Cleanup parser resources"""
-        self.parser = None
+        """Fallback cleanup if close() wasn't called"""
+        try:
+            self.close()
+        except Exception:
+            pass
