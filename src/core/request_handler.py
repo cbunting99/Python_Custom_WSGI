@@ -87,9 +87,22 @@ class WSGIHandler:
             await writer.wait_closed()
 
     async def _read_request(self, reader: asyncio.StreamReader) -> bytes:
-        """Read HTTP request with size and timeout limits."""
+        """Read HTTP request with size and timeout limits.
+        
+        Args:
+            reader: StreamReader to read request from
+            
+        Returns:
+            Complete HTTP request data
+            
+        Raises:
+            WSGIError: If request is too large, malformed, or times out
+        """
         request_data = b''
+        headers_complete = False
+        
         try:
+            # First read headers (must end with \r\n\r\n)
             while len(request_data) < self.MAX_REQUEST_SIZE:
                 chunk = await asyncio.wait_for(
                     reader.read(8192),
@@ -97,16 +110,62 @@ class WSGIHandler:
                 )
                 if not chunk:
                     break
-                request_data += chunk
-                if b'\r\n\r\n' in request_data:
-                    break
                     
-            if len(request_data) >= self.MAX_REQUEST_SIZE:
-                raise WSGIError("Request too large")
+                request_data += chunk
                 
+                # Check if we've received the end of headers
+                if b'\r\n\r\n' in request_data:
+                    headers_complete = True
+                    break
+            
+            # Security check: Ensure we found the end of headers and didn't hit size limit
+            if not headers_complete:
+                if len(request_data) >= self.MAX_REQUEST_SIZE:
+                    raise WSGIError("Request headers too large")
+                else:
+                    raise WSGIError("Incomplete request headers")
+            
+            # Now read the body if needed (based on Content-Length)
+            headers_end = request_data.find(b'\r\n\r\n') + 4
+            headers = request_data[:headers_end].decode('latin1', errors='replace')
+            body_so_far = request_data[headers_end:]
+            
+            # Extract Content-Length if present
+            content_length = 0
+            for line in headers.split('\r\n'):
+                if line.lower().startswith('content-length:'):
+                    try:
+                        content_length = int(line.split(':', 1)[1].strip())
+                        break
+                    except ValueError:
+                        raise WSGIError("Invalid Content-Length header")
+            
+            # Read the rest of the body if needed
+            if content_length > 0:
+                remaining = content_length - len(body_so_far)
+                
+                # Security check: Ensure total request size doesn't exceed limit
+                if headers_end + content_length > self.MAX_REQUEST_SIZE:
+                    raise WSGIError("Request body too large")
+                
+                # Read the remaining body data
+                while remaining > 0 and len(request_data) < self.MAX_REQUEST_SIZE:
+                    chunk = await asyncio.wait_for(
+                        reader.read(min(8192, remaining)),
+                        timeout=self.REQUEST_TIMEOUT
+                    )
+                    if not chunk:
+                        break
+                        
+                    request_data += chunk
+                    remaining -= len(chunk)
+            
             return request_data
+            
         except asyncio.TimeoutError:
             raise WSGIError("Request timeout")
+        except UnicodeDecodeError:
+            raise WSGIError("Invalid request encoding")
 
     async def _parse_request(self, request_data: bytes) -> Tuple[str, str, str, Dict[str, str], bytes]:
         """Parse HTTP request line and headers."""
@@ -240,17 +299,25 @@ class WSGIHandler:
         
         # Add body
         try:
+            # Collect all data from the iterator
             for data in result:
                 if data:
                     if isinstance(data, str):
                         data = data.encode()
                     response_parts.append(data)
         except TypeError:
-            pass  # Skip if result isn't iterable
-            
-        # Call close() if available and callable (and not a list)
-        if not isinstance(result, list) and hasattr(result, 'close') and callable(result.close):
-            result.close()
+            # Skip if result isn't iterable
+            print("Warning: WSGI app returned non-iterable result", file=sys.stderr)
+        except Exception as e:
+            # Handle other exceptions during iteration
+            print(f"Error iterating WSGI app result: {e}", file=sys.stderr)
+        finally:
+            # Always call close() if available (PEP 333/3333 requirement)
+            if hasattr(result, 'close') and callable(result.close):
+                try:
+                    result.close()
+                except Exception as e:
+                    print(f"Error closing WSGI app result: {e}", file=sys.stderr)
             
         return b''.join(response_parts)
 
@@ -340,18 +407,43 @@ class WSGIHandler:
         await writer.drain()
 
 class FileWrapper:
-    """WSGI file wrapper for efficient file transmission."""
+    """WSGI file wrapper for efficient file transmission.
+    
+    This class implements the iterator protocol for WSGI applications
+    to efficiently serve file-like objects.
+    
+    Args:
+        filelike: A file-like object with a read method
+        blksize: Block size for reading in bytes
+        
+    Raises:
+        TypeError: If filelike doesn't have a read method
+    """
     def __init__(self, filelike, blksize=8192):
+        if not hasattr(filelike, 'read') or not callable(filelike.read):
+            raise TypeError("FileWrapper requires a file-like object with a read method")
+            
         self.filelike = filelike
         self.blksize = blksize
-        if hasattr(filelike, 'close'):
+        
+        # Adopt the close method if available
+        if hasattr(filelike, 'close') and callable(filelike.close):
             self.close = filelike.close
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        data = self.filelike.read(self.blksize)
-        if data:
-            return data
-        raise StopIteration
+        try:
+            data = self.filelike.read(self.blksize)
+            if data:
+                return data
+            raise StopIteration
+        except Exception as e:
+            # Convert any read errors to StopIteration to maintain iterator protocol
+            print(f"Error reading from file: {e}", file=sys.stderr)
+            raise StopIteration
+            
+    def close(self):
+        """Default close method if the wrapped object doesn't have one."""
+        pass
