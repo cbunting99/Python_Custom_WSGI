@@ -2,6 +2,37 @@
 
 All notable changes to the Python Custom WSGI Server will be documented in this file.
 
+## [1.5.0] - 2025-07-11
+### Security
+- Enhanced CORS implementation with proper Origin validation
+- Improved request validation with better path traversal detection
+- Added client certificate verification in SSL context
+- Implemented proper hostname verification in SSL
+- Fixed potential security issues in HTTP/2 implementation
+- Added comprehensive input validation for HTTP/2 settings
+
+### Performance
+- Improved memory management in the OptimizedBuffer class
+- Enhanced the MemoryPool implementation to prevent memory leaks
+- Added buffer clearing when returning to the pool
+- Improved HTTP/2 stream handling and resource management
+- Fixed potential memory leaks in the KeepAliveHandler
+
+### Fixed
+- Resolved duplicate imports in multiprocess_server.py
+- Fixed potential race conditions in HTTP/2 connection handling
+- Improved error handling in TLS version fallback
+- Enhanced error recovery in the multiprocess server
+- Fixed SSL verification settings to match security requirements
+- Resolved issues with async test methods
+
+### Changed
+- Replaced print statements with proper logging
+- Added comprehensive error handling in HTTP/2 connection
+- Enhanced IP filtering with CIDR support
+- Improved rate limiter with protection against DoS attacks
+- Added better validation for request content length and paths
+
 ## [1.4.0] - 2025-06-12
 ### Added
 - Implemented SSL/TLS support with modern cipher suites

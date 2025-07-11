@@ -2,7 +2,7 @@
 
 > ⚠️ **NOTICE**: This is a work in progress (WIP) project that has not been thoroughly tested in production environments. Updates are made as time permits. Use with caution in production settings.
 
-A high-performance, asyncio-based WSGI server implementation built for speed and scalability. This server leverages modern Python async capabilities, uvloop, and httptools to deliver exceptional performance for WSGI applications.
+A high-performance, asyncio-based WSGI server implementation built for speed, security, and scalability. This server leverages modern Python async capabilities, uvloop, and httptools to deliver exceptional performance for WSGI applications while maintaining strong security practices.
 
 ## 🚀 Quick Start
 
@@ -28,7 +28,10 @@ python examples/example_usage.py
 - **🚀 HTTP/2 Support**: Full protocol support with multiplexing and server push
 - **📊 Memory Optimized**: Buffer pooling and memory-efficient request parsing
 - **🔒 SSL/TLS Support**: Modern TLS 1.2+ with secure cipher suites
-- ** WSGI Compatible**: Works with any WSGI application (Flask, Django, etc.)
+- **🔐 Enhanced Security**: CORS protection, path traversal prevention, and input validation
+- **🛡️ Rate Limiting**: Protection against DoS attacks with token bucket algorithm
+- **🔍 IP Filtering**: CIDR-based IP whitelist/blacklist functionality
+- **✅ WSGI Compatible**: Works with any WSGI application (Flask, Django, etc.)
 - **🌐 Cross-Platform**: Supports Windows, Linux, and macOS with platform-specific optimizations
 - **🎯 Production Ready**: Optimized for real-world deployment scenarios
 
@@ -176,6 +179,52 @@ server = WSGIServer(
 ```
 
 See `examples/ssl_example.py` for a complete SSL setup example.
+
+### CORS Protection
+
+Configure Cross-Origin Resource Sharing with proper validation:
+
+```python
+from src.features.security import CORSConfig
+from src.core import WSGIServer
+
+cors_config = CORSConfig(
+    allowed_origins=['https://example.com'],
+    allowed_methods=['GET', 'POST', 'OPTIONS'],
+    allowed_headers=['Content-Type', 'Authorization'],
+    allow_credentials=True
+)
+
+server = WSGIServer(app, cors_config=cors_config)
+```
+
+### Rate Limiting
+
+Protect against DoS attacks with configurable rate limiting:
+
+```python
+from src.features.security import RateLimiter
+from src.core import WSGIServer
+
+# Allow 10 requests per second with burst of 50
+rate_limiter = RateLimiter(rate=10.0, burst=50)
+server = WSGIServer(app, rate_limiter=rate_limiter)
+```
+
+### IP Filtering
+
+Control access with IP whitelist/blacklist functionality:
+
+```python
+from src.features.security import IPFilter
+from src.core import WSGIServer
+
+ip_filter = IPFilter()
+ip_filter.add_to_whitelist('192.168.1.0/24')  # Allow entire subnet
+ip_filter.add_to_blacklist('10.0.0.5')        # Block specific IP
+
+server = WSGIServer(app, ip_filter=ip_filter)
+```
 
 ## Performance Features
 
