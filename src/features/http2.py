@@ -44,17 +44,43 @@ class HTTP2Connection:
         }
         
     async def handle_connection(self):
-        """Main connection handling loop."""
+        """Main connection handling loop.
+        
+        This method runs until one of the following occurs:
+        - A GOAWAY frame is received
+        - A frame processing error occurs
+        - The connection is closed by the peer
+        - An exception is raised
+        
+        Returns:
+            None
+        """
         try:
             # Send connection preface
             await self._send_preface()
             
             while True:
                 frame = await self._read_frame()
-                await self._process_frame(frame)
+                
+                # Check if connection was closed by peer
+                if frame is None:
+                    print("HTTP/2 connection closed by peer")
+                    break
+                    
+                # Process the frame and check result
+                continue_processing = await self._process_frame(frame)
+                if not continue_processing:
+                    # Graceful shutdown requested
+                    break
+                    
+        except asyncio.CancelledError:
+            # Handle task cancellation gracefully
+            print("HTTP/2 connection task cancelled")
+            await self.close(error_code=0)  # NO_ERROR
+            raise
         except Exception as e:
-            print(f"HTTP/2 connection error: {e}")
-            await self.close()
+            print(f"HTTP/2 connection error: {e}", file=sys.stderr)
+            await self.close(error_code=2)  # INTERNAL_ERROR
 
     async def _send_preface(self):
         """Send HTTP/2 connection preface."""
@@ -433,7 +459,36 @@ def configure_http2(ssl_context: Optional[ssl.SSLContext] = None) -> ssl.SSLCont
     return ssl_context
 
 async def handle_http2_connection(reader: asyncio.StreamReader, 
-                                 writer: asyncio.StreamWriter):
-    """Handle new HTTP/2 connection."""
+                                 writer: asyncio.StreamWriter,
+                                 timeout: float = 30.0):
+    """Handle new HTTP/2 connection.
+    
+    Args:
+        reader: Stream reader for incoming data
+        writer: Stream writer for outgoing data
+        timeout: Connection timeout in seconds (default: 30.0)
+    """
     conn = HTTP2Connection(reader, writer)
-    await conn.handle_connection()
+    try:
+        # Use asyncio.wait_for to implement timeout
+        await asyncio.wait_for(conn.handle_connection(), timeout=timeout)
+    except asyncio.TimeoutError:
+        # Gracefully close on timeout
+        print("HTTP/2 connection timeout")
+        await conn.close(error_code=0)  # NO_ERROR
+    except asyncio.IncompleteReadError:
+        # Connection closed by peer
+        print("HTTP/2 connection closed by peer")
+        await conn.close(error_code=0)  # NO_ERROR
+    except Exception as e:
+        # Handle other exceptions
+        print(f"HTTP/2 connection error: {e}", file=sys.stderr)
+        await conn.close(error_code=2)  # INTERNAL_ERROR
+    finally:
+        # Ensure writer is closed
+        if not writer.is_closing():
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except Exception as e:
+                print(f"Error waiting for writer to close: {e}", file=sys.stderr)
