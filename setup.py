@@ -13,12 +13,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="custom-wsgi-server",
-    version="1.0.0",
-    author="Chris",
-    description="A high-performance, asyncio-based WSGI server implementation",
+    version="1.5.0",
+    author="Chris Bunting",
+    description="A high-performance, secure, asyncio-based WSGI server implementation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/custom-wsgi-server",
+    url="https://github.com/chrisbunting/custom-wsgi-server",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -34,6 +34,8 @@ setup(
         "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Server",
         "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Security",
+        "Framework :: AsyncIO",
     ],
     python_requires=">=3.8",
     install_requires=requirements,
@@ -41,20 +43,28 @@ setup(
         "dev": [
             "pytest>=7.0.0",
             "pytest-asyncio>=0.23.0",
+            "pytest-cov>=4.1.0",
             "aiohttp>=3.9.0",
-            "black>=23.0.0",
+            "black>=23.3.0",
             "flake8>=6.0.0",
-            "mypy>=1.0.0",
+            "mypy>=1.3.0",
+            "isort>=5.12.0",
+            "bandit>=1.7.5",  # Security linter
         ],
         "test": [
             "pytest>=7.0.0",
             "pytest-asyncio>=0.23.0",
+            "pytest-cov>=4.1.0",
             "aiohttp>=3.9.0",
+        ],
+        "security": [
+            "cryptography>=41.0.0",
+            "pyopenssl>=23.2.0",
         ],
     },
     entry_points={
         "console_scripts": [
-            "custom-wsgi=wsgi_server:main",
+            "custom-wsgi=src.core.wsgi_server:main",
         ],
     },
     include_package_data=True,
