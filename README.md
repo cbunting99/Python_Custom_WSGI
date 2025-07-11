@@ -331,13 +331,63 @@ if __name__ == '__main__':
 
 *Benchmarks are approximate and depend on hardware, application complexity, and configuration.*
 
+## Development
+
+### Code Quality Tools
+
+This project uses several tools to maintain code quality:
+
+```bash
+# Install development tools
+pip install black flake8 pre-commit
+
+# Set up pre-commit hooks
+pre-commit install
+
+# Format code with Black
+black .
+
+# Check code with Flake8
+flake8 .
+
+# Run both tools at once
+python lint.py
+```
+
+See [LINTING.md](LINTING.md) for more details on code quality tools.
+
+### Testing
+
+Run the test suite:
+
+```bash
+# Run all tests
+python -m pytest
+
+# Run specific tests
+python -m pytest tests/test_http2.py
+
+# Run tests with coverage
+python -m pytest --cov=src tests/
+```
+
+### CI/CD
+
+This project uses GitHub Actions for continuous integration:
+
+- Runs tests on multiple Python versions (3.8-3.13)
+- Checks code formatting with Black
+- Lints code with Flake8
+- Reports test coverage
+
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature-name`
 3. Make your changes and add tests
-4. Run tests: `python -m pytest tests/`
-5. Submit a pull request
+4. Run the linting tools: `python lint.py`
+5. Run tests: `python -m pytest tests/`
+6. Submit a pull request
 
 ## License
 

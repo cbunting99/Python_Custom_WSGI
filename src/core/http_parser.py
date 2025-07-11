@@ -22,8 +22,10 @@ import sys
 import httptools
 from typing import Dict, Optional
 
+
 class HTTPParserError(Exception):
     """Custom exception for HTTP parsing errors"""
+
     pass
 
 
@@ -38,9 +40,10 @@ class HTTPParser:
         MAX_HEADER_SIZE: Maximum size per header (8KB)
         MAX_HEADERS: Maximum number of headers per request (100)
     """
+
     MAX_BODY_SIZE = 10485760  # 10MB limit
-    MAX_HEADER_SIZE = 8192    # 8KB per header
-    MAX_HEADERS = 100         # Maximum number of headers
+    MAX_HEADER_SIZE = 8192  # 8KB per header
+    MAX_HEADERS = 100  # Maximum number of headers
 
     def __init__(self):
         try:
@@ -50,7 +53,7 @@ class HTTPParser:
 
         self.headers: Dict[str, str] = {}
         self.trailers: Dict[str, str] = {}
-        self.body = b''
+        self.body = b""
         self.url: Optional[bytes] = None
         self.method: Optional[bytes] = None
         self._headers_count = 0
@@ -74,7 +77,7 @@ class HTTPParser:
         """
         self.headers.clear()
         self.trailers.clear()
-        self.body = b''
+        self.body = b""
         self.url = None
         self.method = None
         self._headers_count = 0
@@ -135,20 +138,20 @@ class HTTPParser:
             if self._headers_count >= self.MAX_HEADERS:
                 raise HTTPParserError("Too many headers")
 
-            name_str = name.decode('ascii')
+            name_str = name.decode("ascii")
             if len(name_str) > 256:  # Reasonable header name length
                 raise HTTPParserError("Header name too long")
 
-            value_str = value.decode('ascii')
+            value_str = value.decode("ascii")
             if len(value_str) > self.MAX_HEADER_SIZE:
                 raise HTTPParserError("Header value too long")
 
-            if '\n' in value_str or '\r' in value_str:
+            if "\n" in value_str or "\r" in value_str:
                 raise HTTPParserError("Invalid header value")
 
             self.headers[name_str] = value_str
             self._headers_count += 1
-            
+
         except UnicodeDecodeError:
             raise HTTPParserError("Invalid header encoding")
         except Exception as e:
@@ -179,8 +182,8 @@ class HTTPParser:
         if self._chunk_size == 0:
             # Parse chunk size line
             try:
-                chunk_line = chunk.split(b'\r\n', 1)[0]
-                self._chunk_size = int(chunk_line.split(b';')[0], 16)
+                chunk_line = chunk.split(b"\r\n", 1)[0]
+                self._chunk_size = int(chunk_line.split(b";")[0], 16)
                 if self._chunk_size == 0:
                     self._parsing_complete = True
             except (ValueError, IndexError):
@@ -221,7 +224,7 @@ class HTTPParser:
 
     def close(self) -> None:
         """Explicitly cleanup parser resources"""
-        if hasattr(self, 'parser'):
+        if hasattr(self, "parser"):
             self.parser = None
 
     def __del__(self):
@@ -230,4 +233,3 @@ class HTTPParser:
             self.close()
         except Exception:
             pass
- 

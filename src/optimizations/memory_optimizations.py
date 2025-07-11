@@ -20,12 +20,14 @@ CHANGELOG:
 import asyncio
 import sys
 
+
 class OptimizedBuffer:
     """Pre-allocated buffer with memoryview for zero-copy operations.
 
     This class provides a reusable buffer with memoryview to minimize
     memory allocations and reduce garbage collection pressure.
     """
+
     def __init__(self, size=8192):
         """Initialize a new buffer.
 
@@ -94,6 +96,7 @@ class MemoryPool:
         # Use buffer...
         pool.return_buffer(buffer)
     """
+
     def __init__(self, buffer_size=8192, pool_size=100):
         """Initialize the memory pool.
 
@@ -138,9 +141,11 @@ class MemoryPool:
         if not isinstance(buffer, OptimizedBuffer):
             return
 
-        if (buffer.size == self.buffer_size and
-                buffer not in self.available and
-                len(self.available) < len(self.pool)):
+        if (
+            buffer.size == self.buffer_size
+            and buffer not in self.available
+            and len(self.available) < len(self.pool)
+        ):
             # Clear the buffer before returning it to the pool
-            buffer.buffer[:] = b'\x00' * buffer.size
+            buffer.buffer[:] = b"\x00" * buffer.size
             self.available.append(buffer)

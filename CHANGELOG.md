@@ -2,6 +2,30 @@
 
 All notable changes to the Python Custom WSGI Server will be documented in this file.
 
+## [1.6.0] - 2025-07-15
+### Added
+- GitHub Actions workflow for CI/CD
+- Pre-commit hooks for code quality
+- Black code formatter configuration
+- Flake8 linter configuration
+- `lint.py` script for running linting tools
+- Documentation for code quality tools in LINTING.md
+- Additional tests for HTTP/2 timeout and error handling
+
+### Fixed
+- HTTP/2 implementation with proper error handling
+- Graceful shutdown for HTTP/2 connections
+- Timeout handling for HTTP/2 connections
+- Test suite for HTTP/2 implementation
+- Server tests to use proper pytest fixtures
+- Code formatting with Black
+- Linting issues with Flake8
+
+### Changed
+- Improved HTTP/2 connection handling with better error recovery
+- Enhanced test coverage for HTTP/2 implementation
+- Updated documentation with code quality guidelines
+
 ## [1.5.0] - 2025-07-11
 ### Security
 - Enhanced CORS implementation with proper Origin validation
