@@ -18,6 +18,40 @@ import logging
 from typing import Dict, Any, Optional
 
 # Configure logging
+def configure_logging(level=logging.INFO, log_file=None):
+    """Configure logging for the WSGI server.
+    
+    Args:
+        level: Logging level (default: INFO)
+        log_file: Optional path to log file
+        
+    Returns:
+        Configured logger instance
+    """
+    logger = logging.getLogger('wsgi_server')
+    logger.setLevel(level)
+    
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s [%(levelname)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # Add console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    # Add file handler if specified
+    if log_file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        
+    return logger
+
+# Default logger instance
+default_logger = configure_logging()
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -153,7 +187,7 @@ async def handle_client_error(
         to ensure resources are released.
     """
     if logger is None:
-        logger = logging.getLogger(__name__)
+        logger = default_logger
         
     error_msg = f"Error handling client request: {str(error)}"
     logger.error(error_msg, exc_info=True)
@@ -162,7 +196,9 @@ async def handle_client_error(
         if not writer.is_closing():
             writer.write(
                 b'HTTP/1.1 500 Internal Server Error\r\n'
+                b'Content-Type: text/plain\r\n'
                 b'Connection: close\r\n\r\n'
+                b'Internal Server Error'
             )
             await writer.drain()
             writer.close()
