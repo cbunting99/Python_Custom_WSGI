@@ -9,15 +9,18 @@ This module provides the core request handling functionality including:
 """
 
 import asyncio
-from io import BytesIO
 import sys
-from typing import Dict, List, Tuple, Union, Optional, Callable, Any
+from io import BytesIO
+from typing import Dict, List, Tuple, Optional, Any
 
-from src.features.security import CORSConfig, validate_request, apply_cors_headers
+from src.features.security import (
+    CORSConfig, validate_request, apply_cors_headers
+)
 
 class WSGIError(Exception):
     """Base class for WSGI handler errors."""
     pass
+
 
 class WSGIHandler:
     """Handles individual HTTP requests according to WSGI specification."""
@@ -30,15 +33,17 @@ class WSGIHandler:
         self.app = app
         self.cors_config = cors_config or CORSConfig()
         self._headers: Dict[str, str] = {}
-        
+
     @property
     def headers(self) -> Dict[str, str]:
         """Get the parsed headers from the last request."""
         return self._headers
         
-    async def handle_request(self,
-                           reader: asyncio.StreamReader,
-                           writer: asyncio.StreamWriter) -> None:
+    async def handle_request(
+            self,
+            reader: asyncio.StreamReader,
+            writer: asyncio.StreamWriter
+    ) -> None:
         """Process a single HTTP request."""
         try:
             # Read request
@@ -88,19 +93,19 @@ class WSGIHandler:
 
     async def _read_request(self, reader: asyncio.StreamReader) -> bytes:
         """Read HTTP request with size and timeout limits.
-        
+
         Args:
             reader: StreamReader to read request from
-            
+
         Returns:
             Complete HTTP request data
-            
+
         Raises:
             WSGIError: If request is too large, malformed, or times out
         """
         request_data = b''
         headers_complete = False
-        
+
         try:
             # First read headers (must end with \r\n\r\n)
             while len(request_data) < self.MAX_REQUEST_SIZE:
@@ -110,7 +115,7 @@ class WSGIHandler:
                 )
                 if not chunk:
                     break
-                    
+                
                 request_data += chunk
                 
                 # Check if we've received the end of headers
@@ -408,21 +413,21 @@ class WSGIHandler:
 
 class FileWrapper:
     """WSGI file wrapper for efficient file transmission.
-    
+
     This class implements the iterator protocol for WSGI applications
     to efficiently serve file-like objects.
-    
+
     Args:
         filelike: A file-like object with a read method
         blksize: Block size for reading in bytes
-        
+
     Raises:
         TypeError: If filelike doesn't have a read method
     """
     def __init__(self, filelike, blksize=8192):
         if not hasattr(filelike, 'read') or not callable(filelike.read):
             raise TypeError("FileWrapper requires a file-like object with a read method")
-            
+        
         self.filelike = filelike
         self.blksize = blksize
         
@@ -447,3 +452,4 @@ class FileWrapper:
     def close(self):
         """Default close method if the wrapped object doesn't have one."""
         pass
+ 

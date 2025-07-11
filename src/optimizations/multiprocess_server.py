@@ -19,8 +19,8 @@ CHANGELOG:
 """
 
 import multiprocessing
-import signal
 import os
+import signal
 import sys
 import time
 from ..core.server_core import WSGIServer
@@ -40,13 +40,12 @@ class MultiProcessWSGIServer:
         self.host = host
         self.port = port
         self.worker_processes = []
-        
     def start(self):
         # Set up signal handlers (Windows doesn't support SIGTERM/SIGINT the same way)
         if sys.platform != 'win32':
             signal.signal(signal.SIGTERM, self._handle_signal)
             signal.signal(signal.SIGINT, self._handle_signal)
-        
+
         default_logger.info(f"Starting {self.workers} worker processes...")
         
         for i in range(self.workers):
@@ -56,7 +55,7 @@ class MultiProcessWSGIServer:
             )
             process.start()
             self.worker_processes.append(process)
-        
+
         try:
             # Wait for workers
             for process in self.worker_processes:
@@ -67,10 +66,10 @@ class MultiProcessWSGIServer:
     
     def _worker_main(self, worker_id):
         """Main function for worker processes.
-        
+
         Args:
             worker_id: Unique ID for this worker
-            
+
         This function sets up the event loop and starts the WSGI server.
         Each worker process has its own event loop and server instance.
         """
@@ -80,7 +79,7 @@ class MultiProcessWSGIServer:
             setproctitle.setproctitle(f"wsgi_worker_{worker_id}")
         except ImportError:
             pass
-            
+
         # Configure worker-specific signal handlers
         if sys.platform != 'win32':
             signal.signal(signal.SIGTERM, lambda sig, frame: sys.exit(0))
@@ -88,7 +87,7 @@ class MultiProcessWSGIServer:
         
         # Each worker runs its own event loop
         import asyncio
-        
+
         try:
             # Use uvloop if available (not on Windows)
             if UVLOOP_AVAILABLE and sys.platform != 'win32':
@@ -108,14 +107,14 @@ class MultiProcessWSGIServer:
     def _handle_signal(self, signum, frame):
         default_logger.info(f"Received signal {signum}, shutting down...")
         self.shutdown()
-            
+
     def shutdown(self):
         """Gracefully shut down all worker processes"""
         # First try to terminate gracefully
         for process in self.worker_processes:
             if process.is_alive():
                 process.terminate()
-                
+
         # Give processes time to terminate gracefully
         deadline = time.time() + 5  # 5 seconds timeout
         
@@ -127,7 +126,7 @@ class MultiProcessWSGIServer:
                 process.join(timeout=remaining)
             except Exception:
                 pass
-                
+
         # Force kill any remaining processes
         for process in self.worker_processes:
             if process.is_alive():
@@ -138,6 +137,6 @@ class MultiProcessWSGIServer:
                         process.kill()
                 except Exception:
                     pass
-                    
+
         # Clear the list
-        self.worker_processes.clear()
+        self.worker_processes.clear() 

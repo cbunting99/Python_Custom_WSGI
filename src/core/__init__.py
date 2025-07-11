@@ -9,7 +9,8 @@ from .wsgi_server import HighPerformanceWSGIServer
 # Expose public interface
 __all__ = [
     'WSGIServer',
-    'HTTPParser', 
+    'HTTPParser',
     'WSGIHandler',
     'HighPerformanceWSGIServer'
 ]
+ 
