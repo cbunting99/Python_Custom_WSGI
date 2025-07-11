@@ -8,6 +8,16 @@ This module provides a robust HTTP request parser with:
 - Support for incremental parsing
 """
 
+"""
+Copyright 2025 Chris Bunting
+File: http_parser.py | Purpose: Efficient HTTP request parsing
+@author Chris Bunting | @version 1.0.0
+
+CHANGELOG:
+2025-07-11 - Chris Bunting: Fixed header validation and error handling
+2025-07-10 - Chris Bunting: Initial implementation
+"""
+
 import httptools
 from typing import Dict, Optional, Tuple, Any
 import sys
