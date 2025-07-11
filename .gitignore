@@ -203,3 +203,4 @@ logs/
 
 # Custom features documentation
 chrisfeatures.md
+tests/test_http2_integration.py

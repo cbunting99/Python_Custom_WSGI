@@ -40,29 +40,47 @@ class TestHTTP2Integration(unittest.TestCase):
     def test_protocol_negotiation(self, mock_conn_class):
         # Create a mock instance with an awaitable handle_connection method
         mock_conn_instance = MagicMock()
-        mock_conn_instance.handle_connection = MagicMock()
-        # Make handle_connection return a coroutine
-        mock_conn_instance.handle_connection.return_value = asyncio.Future()
-        mock_conn_instance.handle_connection.return_value.set_result(None)
 
-        # Make the mock class return our mock instance
-        mock_conn_class.return_value = mock_conn_instance
-
-        reader = asyncio.StreamReader()
-        writer = MagicMock(spec=asyncio.StreamWriter)
-        writer.get_extra_info.return_value = ("127.0.0.1", 12345)
-
-        # Create a coroutine to test
-        async def test_coro():
-            await handle_http2_connection(reader, writer)
-
-        # Run the coroutine in an event loop
+        # Run the test in an event loop
         loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         try:
+            # Create mock reader and writer
+            reader = asyncio.StreamReader(loop=loop)
+            writer = MagicMock(spec=asyncio.StreamWriter)
+            writer.get_extra_info.return_value = ("127.0.0.1", 12345)
+            writer.is_closing.return_value = False
+
+            # Create a future that will raise an exception to test error handling
+            future = asyncio.Future(loop=loop)
+            future.set_exception(ValueError("Test exception"))
+            mock_conn_instance.handle_connection.return_value = future
+
+            # Make close method awaitable by returning a completed future
+            close_future = asyncio.Future(loop=loop)
+            close_future.set_result(None)
+            mock_conn_instance.close.return_value = close_future
+
+            # Make writer.wait_closed awaitable
+            wait_closed_future = asyncio.Future(loop=loop)
+            wait_closed_future.set_result(None)
+            writer.wait_closed.return_value = wait_closed_future
+
+            # Make the mock class return our mock instance
+            mock_conn_class.return_value = mock_conn_instance
+
+            # Create a coroutine to test
+            async def test_coro():
+                await handle_http2_connection(reader, writer)
+
+            # Run the test
             loop.run_until_complete(test_coro())
             self.assertTrue(mock_conn_class.called)
             mock_conn_class.assert_called_with(reader, writer)
             self.assertTrue(mock_conn_instance.handle_connection.called)
+            # Verify error handling worked
+            mock_conn_instance.close.assert_called_with(error_code=2)  # INTERNAL_ERROR
         finally:
             loop.close()
 
