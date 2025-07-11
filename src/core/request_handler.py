@@ -29,6 +29,12 @@ class WSGIHandler:
     def __init__(self, app, cors_config: Optional[CORSConfig] = None):
         self.app = app
         self.cors_config = cors_config or CORSConfig()
+        self._headers: Dict[str, str] = {}
+        
+    @property
+    def headers(self) -> Dict[str, str]:
+        """Get the parsed headers from the last request."""
+        return self._headers
         
     async def handle_request(self,
                            reader: asyncio.StreamReader,
@@ -120,7 +126,8 @@ class WSGIHandler:
             method, path, version = request_line
             
             # Parse headers
-            headers = {}
+            self._headers = {}
+            headers = self._headers
             for line in lines[1:]:
                 if ':' not in line:
                     continue
@@ -232,14 +239,17 @@ class WSGIHandler:
         response_parts.append(b'\r\n')
         
         # Add body
-        for data in result:
-            if data:
-                if isinstance(data, str):
-                    data = data.encode()
-                response_parts.append(data)
-                
-        # Call close() if available
-        if hasattr(result, 'close'):
+        try:
+            for data in result:
+                if data:
+                    if isinstance(data, str):
+                        data = data.encode()
+                    response_parts.append(data)
+        except TypeError:
+            pass  # Skip if result isn't iterable
+            
+        # Call close() if available and callable (and not a list)
+        if not isinstance(result, list) and hasattr(result, 'close') and callable(result.close):
             result.close()
             
         return b''.join(response_parts)
