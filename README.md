@@ -1,3 +1,4 @@
+[![Python Package using Conda](https://github.com/cbunting99/Python_Custom_WSGI/actions/workflows/python-package-conda.yml/badge.svg)](https://github.com/cbunting99/Python_Custom_WSGI/actions/workflows/python-package-conda.yml)
 # Custom High-Performance WSGI Server
 
 > ⚠️ **NOTICE**: This is a work in progress (WIP) project that has not been thoroughly tested in production environments. Updates are made as time permits. Use with caution in production settings.
