@@ -72,8 +72,8 @@ class WSGIServer:
         self.rate_limiter = None
         if rate_limit:
             self.rate_limiter = RateLimiter(
-                rate=rate_limit.get('rate', 10.0),
-                burst=rate_limit.get('burst', 20)
+                rate=float(rate_limit.get('rate', 10.0)),
+                burst=int(rate_limit.get('burst', 20))
             )
         
         self.ip_filter = IPFilter()
@@ -172,11 +172,18 @@ class WSGIServer:
         - Request handling via WSGIHandler
         - Error handling and connection cleanup
         - Resource tracking for graceful shutdown
+        - Keepalive and pipelining support
         """
         if self._shutdown_event.is_set():
             writer.close()
             await writer.wait_closed()
             return
+
+        # Configure TCP optimizations
+        sock = writer.get_extra_info('socket')
+        if sock:
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
         client_ip = writer.get_extra_info('peername')[0]
         
@@ -184,12 +191,16 @@ class WSGIServer:
         if not self.ip_filter.is_allowed(client_ip):
             writer.write(b'HTTP/1.1 403 Forbidden\r\nContent-Length: 9\r\n\r\nForbidden')
             await writer.drain()
+            writer.close()
+            await writer.wait_closed()
             return
             
         # Check rate limiting
         if self.rate_limiter and not self.rate_limiter.is_allowed(client_ip):
             writer.write(b'HTTP/1.1 429 Too Many Requests\r\nContent-Length: 20\r\n\r\nToo many requests')
             await writer.drain()
+            writer.close()
+            await writer.wait_closed()
             return
             
         async with self._request_semaphore:
@@ -198,9 +209,29 @@ class WSGIServer:
                 self._active_connections.add(task)
             try:
                 handler = WSGIHandler(self.app, self.cors_config)
-                await handler.handle_request(reader, writer)
-            except Exception as e:
-                await handle_client_error(writer, e)
+                keepalive_timeout = 5.0  # Default keepalive timeout
+                
+                while not self._shutdown_event.is_set():
+                    try:
+                        # Set timeout for keepalive connections
+                        await asyncio.wait_for(
+                            handler.handle_request(reader, writer),
+                            timeout=keepalive_timeout
+                        )
+                        
+                        # Check Connection header for keepalive
+                        connection_header = handler.headers.get('Connection', '').lower()
+                        if connection_header != 'keep-alive':
+                            break
+                            
+                    except asyncio.TimeoutError:
+                        break
+                    except (ConnectionResetError, BrokenPipeError):
+                        break
+                    except Exception as e:
+                        await handle_client_error(writer, e)
+                        break
+                        
             finally:
                 if task:
                     self._active_connections.remove(task)
