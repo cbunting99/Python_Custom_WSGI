@@ -332,6 +332,40 @@ if __name__ == '__main__':
 
 *Benchmarks are approximate and depend on hardware, application complexity, and configuration.*
 
+### Verify Performance Claims
+
+You can verify these performance claims on your own hardware using the included benchmark tools:
+
+#### Windows Users
+
+```bash
+# Install benchmark dependencies
+pip install gunicorn requests aiohttp
+
+# Run simple benchmark (no external dependencies)
+python -m benchmarks.simple_benchmark
+
+# Or use the batch file
+run_simple_benchmark.bat
+```
+
+#### Linux/macOS Users
+
+```bash
+# Install benchmark dependencies
+pip install gunicorn uwsgi
+
+# Set up benchmark environment
+python -m benchmarks.benchmark --setup-only --generate-certs
+
+# Run benchmarks
+python -m benchmarks.benchmark --http2
+
+# See detailed results in benchmarks/results directory
+```
+
+For more information on benchmarking, see [benchmarks/README.md](benchmarks/README.md).
+
 ## Development
 
 ### Code Quality Tools
