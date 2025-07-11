@@ -37,10 +37,10 @@ def check_server_components():
         'src.core.request_handler', 
         'src.httptools_server',
         'src.core.server_core',
-        'src.memory_optimizations',
-        'src.keepalive',
-        'src.pipelining',
-        'src.multiprocess_server'
+        'src.optimizations.memory_optimizations',
+        'src.features.keepalive',
+        'src.features.pipelining',
+        'src.optimizations.multiprocess_server'
     ]
     
     all_good = True

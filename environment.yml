@@ -1,0 +1,35 @@
+name: wsgi-server
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.8
+  - pip>=21.0
+  # Core dependencies
+  - httptools>=0.6.0
+  - pip:
+    - hpack>=4.0.0
+    - setproctitle>=1.3.2
+    # Platform-specific optimizations (will be skipped on Windows)
+    - "uvloop>=0.19.0; sys_platform != 'win32'"
+    # Security dependencies
+    - cryptography>=41.0.0
+    # Optional dependencies for enhanced performance
+    - cython>=3.0.0
+    # Development dependencies
+    - pytest>=7.0.0
+    - pytest-asyncio>=0.23.0
+    - pytest-cov>=4.1.0
+    - aiohttp>=3.9.0
+    - black>=23.3.0
+    - mypy>=1.3.0
+    # Demo dependencies
+    - requests>=2.28.0
+    - webbrowser
+# Platform-specific dependencies
+platforms:
+  - linux-64
+  - osx-64
+  - win-64
+variables:
+  PYTHONPATH: $CONDA_PREFIX/lib/python$PY_VER/site-packages
