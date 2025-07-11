@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Callable, Set, Optional, Any, Union, Dict, List
 
 from .request_handler import WSGIHandler
-from .server_utils import setup_uvloop, get_server_kwargs, handle_client_error
+from .server_utils import setup_uvloop, get_server_kwargs, handle_client_error, default_logger
 from .ssl_utils import create_ssl_context, validate_cert_paths
 from src.features.security import CORSConfig, RateLimiter, IPFilter
 from src.features.http2 import configure_http2
@@ -149,14 +149,52 @@ class WSGIServer:
             if self._active_connections:
                 await asyncio.wait(self._active_connections)
 
-    async def shutdown(self) -> None:
+    async def shutdown(self, timeout: float = 30.0) -> None:
         """Initiate graceful server shutdown.
         
         Stops accepting new connections and waits for existing connections
         to complete before shutting down the server.
+        
+        Args:
+            timeout: Maximum time in seconds to wait for connections to close
         """
-        print("Initiating graceful shutdown...")
+        default_logger.info("Initiating graceful shutdown...")
+        
+        # Signal shutdown to prevent new connections
         self._shutdown_event.set()
+        
+        if self._server:
+            self._server.close()
+            await self._server.wait_closed()
+            
+        # Wait for active connections to complete with timeout
+        if self._active_connections:
+            default_logger.info(f"Waiting for {len(self._active_connections)} active connections to complete...")
+            
+            try:
+                # Create a list of tasks to wait for
+                tasks = list(self._active_connections)
+                if tasks:
+                    # Wait with timeout
+                    done, pending = await asyncio.wait(
+                        tasks, 
+                        timeout=timeout,
+                        return_when=asyncio.ALL_COMPLETED
+                    )
+                    
+                    # Force close any pending connections
+                    if pending:
+                        default_logger.warning(f"Force closing {len(pending)} connections that didn't complete in time")
+                        for task in pending:
+                            if not task.done():
+                                task.cancel()
+                                
+                        # Wait for cancellations to complete
+                        await asyncio.wait(pending, timeout=5.0)
+            except Exception as e:
+                default_logger.error(f"Error during shutdown: {e}", exc_info=True)
+                
+        default_logger.info("Server shutdown complete")
 
     async def handle_client(self,
                            reader: asyncio.StreamReader,
@@ -185,11 +223,13 @@ class WSGIServer:
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
-        client_ip = writer.get_extra_info('peername')[0]
+        # Get client IP safely
+        peername = writer.get_extra_info('peername')
+        client_ip = peername[0] if peername else '0.0.0.0'
         
         # Check IP filtering
         if not self.ip_filter.is_allowed(client_ip):
-            writer.write(b'HTTP/1.1 403 Forbidden\r\nContent-Length: 9\r\n\r\nForbidden')
+            writer.write(b'HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nForbidden')
             await writer.drain()
             writer.close()
             await writer.wait_closed()
@@ -197,7 +237,7 @@ class WSGIServer:
             
         # Check rate limiting
         if self.rate_limiter and not self.rate_limiter.is_allowed(client_ip):
-            writer.write(b'HTTP/1.1 429 Too Many Requests\r\nContent-Length: 20\r\n\r\nToo many requests')
+            writer.write(b'HTTP/1.1 429 Too Many Requests\r\nContent-Type: text/plain\r\nContent-Length: 20\r\n\r\nToo many requests')
             await writer.drain()
             writer.close()
             await writer.wait_closed()
@@ -208,8 +248,10 @@ class WSGIServer:
             if task:
                 self._active_connections.add(task)
             try:
+                # Create a single handler instance for this connection
+                # This is more efficient than creating a new one for each request
                 handler = WSGIHandler(self.app, self.cors_config)
-                keepalive_timeout = 5.0  # Default keepalive timeout
+                keepalive_timeout = 5.0  # Default keepalive timeout in seconds
                 
                 while not self._shutdown_event.is_set():
                     try:
