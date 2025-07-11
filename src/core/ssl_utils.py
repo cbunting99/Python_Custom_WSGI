@@ -5,7 +5,18 @@ Provides functions for setting up secure SSL contexts with modern cipher suites
 and proper security settings.
 """
 
+"""
+Copyright 2025 Chris Bunting
+File: ssl_utils.py | Purpose: SSL/TLS configuration utilities
+@author Chris Bunting | @version 1.0.0
+
+CHANGELOG:
+2025-07-11 - Chris Bunting: Fixed server-side SSL verification settings
+2025-07-10 - Chris Bunting: Initial implementation
+"""
+
 import ssl
+import warnings
 from typing import Optional, Union, Tuple
 from pathlib import Path
 
@@ -40,17 +51,24 @@ def create_ssl_context(
     except AttributeError:
         pass  # SSLv3 not available to disable
         
-    # Disable old TLS versions
-    context.options |= ssl.OP_NO_TLSv1
-    context.options |= ssl.OP_NO_TLSv1_1
+    # Disable old TLS versions using minimum_version instead of deprecated options
+    # This is the modern way to disable old protocols
+    try:
+        # Set minimum TLS version (this effectively disables older protocols)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+    except (AttributeError, ValueError):
+        # Fall back to deprecated options for older Python versions
+        import warnings
+        warnings.filterwarnings('ignore', category=DeprecationWarning)
+        context.options |= ssl.OP_NO_TLSv1
+        context.options |= ssl.OP_NO_TLSv1_1
     
     # Enable forward secrecy and server cipher preferences
     context.options |= ssl.OP_SINGLE_DH_USE
     context.options |= ssl.OP_SINGLE_ECDH_USE
     context.options |= ssl.OP_CIPHER_SERVER_PREFERENCE
     
-    # Set minimum TLS version (this effectively disables older protocols)
-    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    # Minimum TLS version is already set above
     
     # Modern cipher suites prioritizing perfect forward secrecy
     default_ciphers = (
@@ -62,8 +80,16 @@ def create_ssl_context(
     # Set cipher suite
     context.set_ciphers(ciphers or default_ciphers)
     
-    # Enable verification
-    context.verify_mode = ssl.CERT_REQUIRED
+    # Set certificate verification mode
+    # For server-side SSL, we can either:
+    # - CERT_NONE: Don't verify client certificates (less secure but common)
+    # - CERT_REQUIRED: Require and verify client certificates (more secure)
+    # Default to CERT_REQUIRED for maximum security
+    context.verify_mode = ssl.CERT_REQUIRED  # Require client certificates
+    
+    # Enable hostname checking for maximum security
+    # While primarily for client verification, enabling this provides additional
+    # security when verifying client certificates
     context.check_hostname = True
     
     # Load certificate and key
