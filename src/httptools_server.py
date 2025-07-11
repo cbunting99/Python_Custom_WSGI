@@ -1,3 +1,23 @@
+"""
+High-performance WSGI server implementation using httptools.
+
+This module provides a high-performance WSGI server implementation that:
+- Uses httptools for fast HTTP parsing
+- Supports multi-processing for improved performance
+- Integrates with uvloop when available
+- Implements HTTP keep-alive and pipelining
+"""
+
+"""
+Copyright 2025 Chris Bunting
+File: httptools_server.py | Purpose: High-performance WSGI server
+@author Chris Bunting | @version 1.0.0
+
+CHANGELOG:
+2025-07-11 - Chris Bunting: Fixed wsgi.errors to use sys.stderr
+2025-07-10 - Chris Bunting: Initial implementation
+"""
+
 import asyncio
 import httptools
 import multiprocessing
@@ -174,7 +194,7 @@ class ConnectionHandler:
             'wsgi.version': (1, 0),
             'wsgi.url_scheme': 'http',
             'wsgi.input': BytesIO(request_data['body']),
-            'wsgi.errors': None,
+            'wsgi.errors': sys.stderr,  # WSGI spec requires a file-like object
             'wsgi.multithread': False,
             'wsgi.multiprocess': True,
             'wsgi.run_once': False,
