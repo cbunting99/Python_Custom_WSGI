@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "python-custom-wsgi"
+version = "1.2.0"
+description = "High-performance custom WSGI server using httptools"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Chris Bunting" }]
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.4.1",
+  "ruff",
+  "mypy",
+  "pip-audit",
+  "prometheus_client",
+  "httptools",
+  "python-json-logger",
+  "uvloop",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

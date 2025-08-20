@@ -1,0 +1,11 @@
+# Development / CI dependencies (recommended to pin exact versions for reproducible builds)
+# Note: Adjust versions to match your environment or CI matrix before release.
+
+pytest==8.4.1
+ruff
+mypy
+pip-audit
+prometheus_client
+httptools
+python-json-logger
+uvloop
