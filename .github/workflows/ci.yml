@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.10, 3.11, 3.12]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install runtime requirements (if present)
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          fi
+
+      - name: Install dev/test tools
+        run: |
+          python -m pip install pytest ruff mypy pip-audit prometheus_client httptools python-json-logger || true
+
+      - name: Lint (ruff)
+        run: |
+          if command -v ruff >/dev/null 2>&1; then
+            ruff check .
+          else
+            echo "ruff not available, skipping lint"
+          fi
+
+      - name: Type-check (mypy)
+        run: |
+          if command -v mypy >/dev/null 2>&1; then
+            mypy src || true
+          else
+            echo "mypy not available, skipping type checks"
+          fi
+
+      - name: Security scan (pip-audit)
+        run: |
+          if command -v pip-audit >/dev/null 2>&1; then
+            pip-audit --progress-spinner=off
+          else
+            echo "pip-audit not available, installing and running"
+            python -m pip install pip-audit
+            python -m pip_audit --progress-spinner=off || true
+          fi
+
+      - name: Run tests
+        run: python -m pytest -q
